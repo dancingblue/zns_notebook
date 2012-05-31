@@ -1,0 +1,497 @@
+﻿<!DOCTYPE html> 
+<html> 
+<head> 
+<meta charset="utf-8" />
+<title>标题</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<link rel="stylesheet" href="http://code.jquery.com/mobile/1.1.0/jquery.mobile-1.1.0.min.css" />
+<style>
+ul,li{margin:0; padding:0;}
+li{list-style:none;}
+.login{width:100%; overflow:hidden; margin-top:30px;}
+.login li{overflow:hidden; margin-bottom:15px;}
+.login span{
+	float:left;
+	line-height:40px;
+	margin-right:10px;
+}
+.login input{
+	float:left;
+	width:92%;
+}
+.login #btn_login{
+	width:99%;
+	height:50px;
+	font-size:22px;
+	font-family:"Microsoft YaHei";
+}
+.login #reg_btn_login
+{
+	width:99%;
+	height:50px;
+	font-size:22px;
+	font-family:"Microsoft YaHei";
+}
+.login #reg_btn_logout
+{
+	width:99%;
+	height:50px;
+	font-size:22px;
+	font-family:"Microsoft YaHei";
+}
+</style>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+<script src="http://code.jquery.com/mobile/1.1.0/jquery.mobile-1.1.0.min.js"></script>
+<script src="http://hmu019487.chinaw3.com/js/zns/common.js"></script>
+<script>
+var json2 = {};
+
+$(function(){
+	$('#btn_login').click(function(){
+		//alert($('#userName').attr('value'))
+		request('../../zpi/zns_user.php', {
+			act:'login',
+			email:$('#userName').attr('value'),
+			password:$('#password').attr('value')
+		}, 
+		function(json){
+			$('#a_login').html('您已登录<span style="color:#ccc;">('+json.email+')</span>');
+			$('#a_login').attr('href','javascript:;');
+			window.location = '#option';
+			
+			$(function(){
+					request('api/z.php', {
+						act:'get_list',
+					}, 
+					function(json){
+						var oOldLi=$('#index_list li').eq(1);
+						for(var i=0;i<json.list.length;i++)
+						{	
+							var oLi=oOldLi.clone();
+							oLi.prependTo('#index_list');
+							oLi.find('a span').eq(0).html(json.list[i].title);
+							oLi.find('a span').eq(1).html(time2date(json.list[i].mod_time));
+							//(t)
+							
+							oLi.data('idName',json.list[i].ID);
+						}
+					}, 
+					function(str){
+						alert(str);
+					}
+				)
+			})
+		}, 
+		function(str){
+			if(str==1)
+			{
+				alert('用户名或密码错误');
+			}
+		});
+	});
+	$('#reg_btn_login').click(function(){
+		request('../../zpi/zns_user.php', {
+			act:'reg',
+			email:$('#reg_userName').attr('value'),
+			password:$('#reg_password').attr('value')
+		}, 
+		
+		function(){
+			alert('成功');
+		}, 
+		function(str){
+			alert(str);
+		}
+		
+		)
+	});
+	$('#reg_btn_logout').click(function(){
+		request('../../zpi/zns_user.php', {
+			act:'logout'
+		},
+		function(){
+			alert('成功');
+		}, 
+		function(str){
+		}
+		
+		)
+	});
+	//添加笔记
+	$('#zns_add').click(function(){
+		request('api/z.php', {
+			act:'add',
+			content:$('#zns_content').attr('value'),
+			title:$('#title').text(),
+			catalog:$('#catalog_select').attr('value')
+		}, 
+		
+		function(){
+			window.location = '#home';
+		}, 
+		function(str){
+			alert(str);
+		}
+		
+		)
+	})
+
+	//获取笔记
+	$('#index_list li').live('click',(function(){
+		request('api/z.php', {
+			act:'get',
+			id:$(this).data('idName')
+			}, 
+			function(json){
+				$('#title').text(json.title);
+				$('#zns_content').val(json.content);
+			}, 
+			function(str){
+				alert(str);
+			}
+		)
+	}))
+	
+	//删除笔记
+	$('#index_list li').live('swiperight',(function(){
+		request('api/z.php', {
+			act:'del',
+			id:$(this).data('idName')
+			}, 
+			function(json){
+				$('this').remove();
+			}, 
+			function(str){
+				alert(str);
+			}
+		)
+	}))
+	
+	//检测是否登录
+	/*$(function(){
+		request('../../zpi/zns_user.php', {
+			act:'cur_user'
+		}, 
+		function(){
+			if(str==0)
+			{
+				$('#a_login').text('已登录').attr('href','#');
+			}
+		}, 
+		function(){
+			
+		}
+		
+		)
+	})*/
+	
+	//获取笔记
+	$(function(){
+		request('api/z.php', {
+			act:'get_list',
+		}, 
+		function(json){
+			var oOldLi=$('#index_list li').eq(1);
+			var oOldLi_log=$('#index_list li').eq(0);
+			
+			oOldLi_log.remove();
+			oOldLi.remove();
+			
+			for(var i=0;i<json.list.length;i++)
+			{
+				if(!json2[json.list[i].catalog])
+				{
+					json2[json.list[i].catalog]=[];
+				}
+				
+				json2[json.list[i].catalog].push(json.list[i]);
+			}
+			
+			if(!json2['默认分类'])json2['默认分类']=[];
+			if(!json2['工作'])json2['工作']=[];
+			if(!json2['学习'])json2['学习']=[];
+			if(!json2['娱乐'])json2['娱乐']=[];
+			
+			//alert(json2['工作']);
+			
+			for(var i in json2)
+			{
+				var oLi=oOldLi_log.clone();
+				oLi.appendTo('#index_list');
+				oLi.html(i);
+				json2[i].sort(function (a1,a2){return a2.mod_time-a1.mod_time});
+				for(var j=0;j<json2[i].length;j++)
+				{
+					var oLi=oOldLi.clone();
+					oLi.appendTo('#index_list');
+					oLi.find('a span').eq(0).html(json2[i][j].title);
+					oLi.find('a span').eq(1).html(time2date(json2[i][j].mod_time));
+				}
+			}
+			
+			/*for(var i=0;i<json.list.length;i++)
+			{	
+				//var oLi=oOldLi.clone();
+				//oLi.prependTo('#index_list');
+				//oLi.find('a span').eq(0).html(json.list[i].title);
+				//oLi.find('a span').eq(1).html(time2date(json.list[i].mod_time));
+				if(json.list[i].catalog == json.list[i+1].catalog)
+				{
+					json2.catelog = json.list[i].catalog;
+					json2.title = json.list[i].title;
+					json2.mod_time = json.list[i].mod_time;
+					
+					var oLi=oOldLi.clone();
+					oLi.prependTo('#index_list');
+					oLi.find('a span').eq(0).html(json2.title);
+					oLi.find('a span').eq(1).html(time2date(json2.mod_time));
+				}
+			}*/
+		}, 
+		function(str){
+			alert(str);
+		}
+		
+		)
+	});
+	$('#newAdd,#newAdd_').click(function(){
+		$('#title').text('');
+		$('#zns_content').attr('value','');
+	})
+	
+	
+	var oOldLi_all=$('#all_class_list li').eq(1);
+	
+	var str='';
+	
+	//分类
+	$('#zns_class').click(function(){
+		$('#all_class li').eq(1).find('span').eq(1).text(json2['默认分类'].length);
+		$('#all_class li').eq(2).find('span').eq(1).text(json2['工作'].length);
+		$('#all_class li').eq(3).find('span').eq(1).text(json2['学习'].length);
+		$('#all_class li').eq(4).find('span').eq(1).text(json2['娱乐'].length);
+		
+		$('#all_class li').click(function(){
+			var sCata=$(this).find('a span').eq(0).text();
+			$('#title_class').text($(this).find('a span').eq(0).html());
+			
+			if(!str)
+			{
+				$('#all_class_list li').eq(1).wrap('<div></div>');
+				str=$('#all_class_list div').html();
+				$('#all_class_list li').eq(1).unwrap();
+				alert(str);
+			}
+			
+			//$('#all_class_list').html('<li data-role="list-divider" id="title_class"></li>');
+			//var aLi=$('#all_class_list li');
+			//alert(json2[$(this).find('a span').eq(0).text()].length);
+			for(var i=0; i<json2[sCata].length;i++)
+			{
+				//var oLi=oOldLi_all.clone();
+				var oLi=$(str);
+				oLi.appendTo('#all_class_list');
+				oLi.find('a').html(json2[sCata][i].title + '<br /><span style="font-size:12px; color:#666;">'+time2date(json2[sCata][i].mod_time)+'</span>');
+			}
+		})
+	})
+})
+
+
+</script>
+</head>
+<body>
+<div data-role="page" id="home">
+	<div data-role="header" data-theme="b">
+	<a href="#" data-icon="minus" class="ui-btn-left" data-iconpos="left">编辑</a>
+    <a href="#newly" data-transition="slide" data-icon="search" class="ui-btn-corner-right" data-iconpos="right">查找</a>
+    <h3>智能笔记</h3>
+    </div>
+    <div data-role="content">
+        <ul data-role="listview" class="list" id="index_list">
+            <li data-role="list-divider">默认分类</li>
+             <li>
+                <a href="#newly">
+                    <span></span><br>
+                    <span class="gray"></span>
+                    <input type="button" />
+                </a>
+            </li>
+        </ul>
+        
+        
+    </div>
+    <div data-role="footer" data-theme="b" data-position="fixed">
+        <div data-role="navbar" data-iconpos="top">
+            <ul>
+                <li><a href="#classification" data-transition="slide" data-icon="grid" id="zns_class">分类</a></li>
+                <li><a href="#" data-icon="arrow-u">标签</a></li>
+                <li><a href="#newly" data-icon="plus" data-transition="slide" id="newAdd">新建</a></li>
+                <li><a href="#option" data-icon="gear" data-transition="slide">选项</a></li>
+                <li><a href="#" data-icon="star">官网</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!--新建-->
+<div data-role="page" id="newly">
+	<div data-role="header" data-theme="b">
+        <a href="#home" data-transition="slide" data-direction="reverse">取消</a>
+        <a href="#" class="ui-btn-right" id="zns_add">保存</a>
+        <h3 contenteditable="true" style="text-align:left;margin: 0.6em 0 0.8em; padding:0 4em;" id="title"></h3>
+        <!--<input type="text" data-role="none" style="border:none; background:none; outline:none; position:absolute; border: #999 solid 1px; top:2px; left:16%; width:68%; height:30px; font-size:18px;" />-->
+    </div>
+    <div data-role="content">
+    	<textarea class="ui-slider-input" style="margin-bottom:20px;" id="zns_content"></textarea>
+        <select id="catalog_select">
+        	<option value="默认分类">默认分类</option>
+            <option value="学习">学习</option>
+            <option value="工作">工作</option>
+            <option value="娱乐">娱乐</option>
+        </select>
+    </div>
+</div>
+
+<!--选项-->
+<div data-role="page" id="option">
+	<div data-role="header" data-theme="b">
+        <a href="#home" data-transition="slide" data-direction="reverse" data-icon="arrow-l" id="btn_data">返回</a>
+        <h3>选项</h3>
+    </div>
+    <div data-role="content">
+        <ul data-role="listview">
+            <li data-role="list-divider">账户</li>
+            <li>
+                <a href="#login" data-transition="slide" id="a_login">
+                登陆<br>
+                </a>
+            </li>
+            <li data-role="list-divider">帮助&amp;关于</li>
+            <li>
+                <a href="#">
+                关于我们<br>
+                    <span class="gray">2012-5-24 1:19:05</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                帮助<br>
+                    <span class="gray">2012-5-24 1:19:05</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+
+<!--选项-->
+<div data-role="page" id="login">
+	<div data-role="header" data-theme="b">
+        <a href="#option" data-transition="slide" data-direction="reverse" data-icon="arrow-l">返回</a>
+        <h3>登陆</h3>
+    </div>
+    <div data-role="content">
+        <ul data-role="listview">
+            <li data-role="list-divider">用户登陆</li>
+        </ul>
+        <ul class="login">
+            <li>
+                <span>用户名：</span><input type="email" id="userName" placeholder="请输入邮箱地址"/>
+            </li>
+            <li>
+                <span>密　码：</span><input type="password" id="password" />
+            </li>
+            <li>
+            	<input data-role="none" type="button" value="登　陆" id="btn_login" />
+            </li>
+            <li>
+            	<a href="#reg" data-transition="slide">注册</a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div data-role="page" id="reg">
+	<div data-role="header" data-theme="b">
+        <a href="#login" data-transition="slide" data-direction="reverse" data-icon="arrow-l">返回</a>
+        <h3>登陆</h3>
+    </div>
+    <div data-role="content">
+        <ul data-role="listview">
+            <li data-role="list-divider">用户登陆</li>
+        </ul>
+        <ul class="login">
+            <li>
+                <span>用户名：</span><input type="email" id="reg_userName" placeholder="请输入邮箱" />
+            </li>
+            <li>
+                <span>密　码：</span><input type="password" id="reg_password" />
+            </li>
+            <li>
+            	<input data-role="none" type="button" value="注　册" id="reg_btn_login" />
+				<input data-role="none" type="button" value="退　出" id="reg_btn_logout" />
+            </li>
+        </ul>
+    </div>
+</div>
+<!--分类-->
+<div data-role="page" id="classification">
+	<div data-role="header" data-theme="b">
+        <a href="#home" data-transition="slide" data-direction="reverse" data-icon="arrow-l">返回</a>
+        <h3>分类</h3>
+    </div>
+    <div data-role="content">
+        <ul data-role="listview" id="all_class">
+            <li data-role="list-divider">全部分类</li>
+            <li>
+                <a href="#classContent" data-transition="slide">
+                <span>默认分类</span></span>(<span></span>)<br>
+                </a>
+            </li>
+            <li>
+                <a href="#classContent" data-transition="slide">
+                <span>工作</span>(<span></span>)<br>
+                </a>
+            </li>
+            <li>
+                <a href="#classContent" data-transition="slide">
+                <span>学习</span>(<span></span>)<br>
+                </a>
+            </li>
+            <li>
+                <a href="#classContent" data-transition="slide">
+                <span>娱乐</span>(<span></span>)<br>
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<!--分类详细内容-->
+<div data-role="page" id="classContent">
+	<div data-role="header" data-theme="b">
+        <a href="#home" data-transition="slide" data-direction="reverse" data-icon="arrow-l">返回</a>
+        <h3>分类详细笔记</h3>
+    </div>
+    <div data-role="content">
+        <ul data-role="listview" class="list" id="all_class_list">
+            <li data-role="list-divider" id="title_class"></li>
+            <li>
+                <a href="#newly" data-transition="slide">
+                <br>
+                	<span style="font-size:12px; color:#666;"></span>
+                </a>
+            </li>
+            
+        </ul>
+    </div>
+</div>
+
+
+
+
+</body>
+</html>
